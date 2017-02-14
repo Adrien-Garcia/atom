@@ -127,6 +127,13 @@ class TextEditorComponent
     @domNode
 
   updateSync: ->
+    if @updateInProgress
+      throw new Error('HA!!')
+    @updateInProgress = true
+    {scrollTop, scrollLeft} = @presenter.getPendingAutoscroll()
+    @setScrollTop(scrollTop) if scrollTop?
+    @setScrollLeft(scrollLeft) if scrollLeft?
+
     @updateSyncPreMeasurement()
 
     @oldState ?= {width: null}
@@ -176,6 +183,8 @@ class TextEditorComponent
     if @editor.isAlive()
       @updateParentViewFocusedClassIfNeeded()
       @updateParentViewMiniClass()
+
+    @updateInProgress = false
 
   updateSyncPreMeasurement: ->
     @linesComponent.updateSync(@presenter.getPreMeasurementState())
@@ -382,22 +391,24 @@ class TextEditorComponent
     # @presenter.onDidChangeScrollLeft(callback)
 
   setScrollLeft: (scrollLeft) ->
-    @presenter.setScrollLeft(scrollLeft)
+    @scrollViewNode.scrollLeft = scrollLeft
+    @presenter.updateScrollLeft(@scrollViewNode.scrollLeft)
 
   setScrollRight: (scrollRight) ->
     @presenter.setScrollRight(scrollRight)
 
   setScrollTop: (scrollTop) ->
-    @presenter.setScrollTop(scrollTop)
+    @scrollViewNode.scrollTop = scrollTop
+    @presenter.updateScrollTop(@scrollViewNode.scrollTop)
 
   setScrollBottom: (scrollBottom) ->
     @presenter.setScrollBottom(scrollBottom)
 
   getScrollTop: ->
-    @presenter.getScrollTop()
+    @scrollViewNode.scrollTop
 
   getScrollLeft: ->
-    @presenter.getScrollLeft()
+    @scrollViewNode.scrollLeft
 
   getScrollRight: ->
     @presenter.getScrollRight()
@@ -656,12 +667,10 @@ class TextEditorComponent
         xDirection = 1
 
       if mouseYDelta?
-        @presenter.setScrollTop(@presenter.getScrollTop() + yDirection * scaleScrollDelta(mouseYDelta))
-        @presenter.commitPendingScrollTopPosition()
+        @setScrollTop(@getScrollTop() + yDirection * scaleScrollDelta(mouseYDelta))
 
       if mouseXDelta?
-        @presenter.setScrollLeft(@presenter.getScrollLeft() + xDirection * scaleScrollDelta(mouseXDelta))
-        @presenter.commitPendingScrollLeftPosition()
+        @setScrollLeft(@getScrollLeft() + xDirection * scaleScrollDelta(mouseXDelta))
 
     scaleScrollDelta = (scrollDelta) ->
       Math.pow(scrollDelta / 2, 3) / 280
