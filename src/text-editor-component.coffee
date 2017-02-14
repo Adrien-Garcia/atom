@@ -672,6 +672,9 @@ class TextEditorComponent
       if mouseXDelta?
         @setScrollLeft(@getScrollLeft() + xDirection * scaleScrollDelta(mouseXDelta))
 
+      if mouseYDelta? or mouseXDelta?
+        @updateSync()
+
     scaleScrollDelta = (scrollDelta) ->
       Math.pow(scrollDelta / 2, 3) / 280
 
