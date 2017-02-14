@@ -9,7 +9,7 @@ import _, {extend, flatten, last, toArray} from 'underscore-plus'
 const NBSP = String.fromCharCode(160)
 const TILE_SIZE = 3
 
-describe('TextEditorComponent', function () {
+fdescribe('TextEditorComponent', function () {
   let charWidth, component, componentNode, contentNode, editor,
       horizontalScrollbarNode, lineHeightInPixels, tileHeightInPixels,
       verticalScrollbarNode, wrapperNode, animationFrameRequests

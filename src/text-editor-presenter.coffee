@@ -8,7 +8,6 @@ class TextEditorPresenter
   toggleCursorBlinkHandle: null
   startBlinkingCursorsAfterDelay: null
   stoppedScrollingTimeoutId: null
-  mouseWheelScreenRow: null
   overlayDimensions: null
   minimumReflowInterval: 200
 
@@ -251,7 +250,9 @@ class TextEditorPresenter
   updateContentState: ->
     if @boundingClientRect?
       @sharedGutterStyles.maxHeight = @boundingClientRect.height
+      @sharedGutterStyles.height = @contentHeight
       @state.content.maxHeight = @boundingClientRect.height
+      @state.content.height = @contentHeight
 
     contentFrameWidth = @contentFrameWidth ? 0
     contentWidth = @contentWidth ? 0
@@ -357,17 +358,11 @@ class TextEditorPresenter
       visibleTiles[tileStartRow] = true
       zIndex++
 
-    mouseWheelTileId = @tileForRow(@mouseWheelScreenRow) if @mouseWheelScreenRow?
-
     for id, tile of @state.content.tiles
       continue if visibleTiles.hasOwnProperty(id)
 
-      if Number(id) is mouseWheelTileId
-        @state.content.tiles[id].display = "none"
-        @lineNumberGutter.tiles[id].display = "none"
-      else
-        delete @state.content.tiles[id]
-        delete @lineNumberGutter.tiles[id]
+      delete @state.content.tiles[id]
+      delete @lineNumberGutter.tiles[id]
 
   updateLinesState: (tileState, screenRows) ->
     tileState.lines ?= {}
@@ -626,7 +621,6 @@ class TextEditorPresenter
 
       @updateStartRow()
       @updateEndRow()
-      @didStartScrolling()
       @emitter.emit 'did-change-scroll-top', @scrollTop
 
   updateScrollLeft: (scrollLeft) ->
@@ -671,7 +665,7 @@ class TextEditorPresenter
   setScrollTop: (scrollTop) ->
     return unless scrollTop?
 
-    @pendingScrollLogicalPosition = null
+    @pendingAutoscroll = null
     @pendingScrollTop = scrollTop
 
     @shouldUpdateDecorations = true
@@ -683,23 +677,10 @@ class TextEditorPresenter
   getRealScrollTop: ->
     @realScrollTop ? @scrollTop
 
-  didStartScrolling: ->
-    if @stoppedScrollingTimeoutId?
-      clearTimeout(@stoppedScrollingTimeoutId)
-      @stoppedScrollingTimeoutId = null
-    @stoppedScrollingTimeoutId = setTimeout(@didStopScrolling.bind(this), @stoppedScrollingDelay)
-
-  didStopScrolling: ->
-    if @mouseWheelScreenRow?
-      @mouseWheelScreenRow = null
-      @shouldUpdateDecorations = true
-
-    @emitDidUpdateState()
-
   setScrollLeft: (scrollLeft) ->
     return unless scrollLeft?
 
-    @pendingScrollLogicalPosition = null
+    @pendingAutoscroll = null
     @pendingScrollLeft = scrollLeft
 
     @emitDidUpdateState()
@@ -789,11 +770,6 @@ class TextEditorPresenter
       @model.setLineHeightInPixels(lineHeight)
       @shouldUpdateDecorations = true
       @emitDidUpdateState()
-
-  setMouseWheelScreenRow: (screenRow) ->
-    if @mouseWheelScreenRow isnt screenRow
-      @mouseWheelScreenRow = screenRow
-      @didStartScrolling()
 
   setBaseCharacterWidth: (baseCharacterWidth, doubleWidthCharWidth, halfWidthCharWidth, koreanCharWidth) ->
     unless @baseCharacterWidth is baseCharacterWidth and @doubleWidthCharWidth is doubleWidthCharWidth and @halfWidthCharWidth is halfWidthCharWidth and koreanCharWidth is @koreanCharWidth
@@ -886,16 +862,14 @@ class TextEditorPresenter
         visibleDecorationsByScreenRowAndId[screenRow][decoration.id] = true
 
     for screenRow, blockDecorations of @precedingBlockDecorationsByScreenRowAndId
-      if Number(screenRow) isnt @mouseWheelScreenRow
-        for id, blockDecoration of blockDecorations
-          unless visibleDecorationsByScreenRowAndId[screenRow]?[id]
-            delete @precedingBlockDecorationsByScreenRowAndId[screenRow][id]
+      for id, blockDecoration of blockDecorations
+        unless visibleDecorationsByScreenRowAndId[screenRow]?[id]
+          delete @precedingBlockDecorationsByScreenRowAndId[screenRow][id]
 
     for screenRow, blockDecorations of @followingBlockDecorationsByScreenRowAndId
-      if Number(screenRow) isnt @mouseWheelScreenRow
-        for id, blockDecoration of blockDecorations
-          unless visibleDecorationsByScreenRowAndId[screenRow]?[id]
-            delete @followingBlockDecorationsByScreenRowAndId[screenRow][id]
+      for id, blockDecoration of blockDecorations
+        unless visibleDecorationsByScreenRowAndId[screenRow]?[id]
+          delete @followingBlockDecorationsByScreenRowAndId[screenRow][id]
 
     @state.content.offScreenBlockDecorations = {}
     @invalidatedDimensionsByBlockDecoration.forEach (decoration) =>
@@ -1223,7 +1197,7 @@ class TextEditorPresenter
     @emitDidUpdateState()
 
   requestAutoscroll: (position) ->
-    @pendingScrollLogicalPosition = position
+    @pendingAutoscroll = position
     @pendingScrollTop = null
     @pendingScrollLeft = null
     @shouldUpdateDecorations = true

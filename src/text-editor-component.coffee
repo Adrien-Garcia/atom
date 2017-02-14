@@ -104,13 +104,6 @@ class TextEditorComponent
     @presenter.destroy()
     @gutterContainerComponent?.destroy()
     @domElementPool.clear()
-
-    @verticalScrollbarComponent.destroy()
-    @horizontalScrollbarComponent.destroy()
-
-    @onVerticalScroll = null
-    @onHorizontalScroll = null
-
     @intersectionObserver?.disconnect()
 
   didAttach: ->
@@ -246,7 +239,6 @@ class TextEditorComponent
     @disposables.add @editor.observeGrammar(@onGrammarChanged)
 
   listenForDOMEvents: ->
-    @domNode.addEventListener 'mousewheel', @onMouseWheel
     @domNode.addEventListener 'textInput', @onTextInput
     @scrollViewNode.addEventListener 'mousedown', @onMouseDown
     @scrollViewNode.addEventListener 'scroll', @onScrollViewScroll
@@ -374,26 +366,6 @@ class TextEditorComponent
       @openedAccentedCharacterMenu = false
 
     @editor.insertText(event.data, groupUndo: true)
-
-  onMouseWheel: (event) =>
-    # Only scroll in one direction at a time
-    # {wheelDeltaX, wheelDeltaY} = event
-    #
-    # if Math.abs(wheelDeltaX) > Math.abs(wheelDeltaY)
-    #   # Scrolling horizontally
-    #   previousScrollLeft = @presenter.getScrollLeft()
-    #   updatedScrollLeft = previousScrollLeft - Math.round(wheelDeltaX * @editor.getScrollSensitivity() / 100)
-    #
-    #   event.preventDefault() if @presenter.canScrollLeftTo(updatedScrollLeft)
-    #   @presenter.setScrollLeft(updatedScrollLeft)
-    # else
-    #   # Scrolling vertically
-    #   @presenter.setMouseWheelScreenRow(@screenRowForNode(event.target))
-    #   previousScrollTop = @presenter.getScrollTop()
-    #   updatedScrollTop = previousScrollTop - Math.round(wheelDeltaY * @editor.getScrollSensitivity() / 100)
-    #
-    #   event.preventDefault() if @presenter.canScrollTopTo(updatedScrollTop)
-    #   @presenter.setScrollTop(updatedScrollTop)
 
   onScrollViewScroll: =>
     @measureScrollPosition()
@@ -882,10 +854,10 @@ class TextEditorComponent
     {clientX, clientY} = event
 
     linesClientRect ?= @linesComponent.getDomNode().getBoundingClientRect()
-    top = clientY - linesClientRect.top + @presenter.getRealScrollTop()
-    left = clientX - linesClientRect.left + @presenter.getRealScrollLeft()
-    bottom = linesClientRect.top + @presenter.getRealScrollTop() + linesClientRect.height - clientY
-    right = linesClientRect.left + @presenter.getRealScrollLeft() + linesClientRect.width - clientX
+    top = clientY - linesClientRect.top
+    left = clientX - linesClientRect.left
+    bottom = linesClientRect.top + linesClientRect.height - clientY
+    right = linesClientRect.left + linesClientRect.width - clientX
 
     {top, left, bottom, right}
 
